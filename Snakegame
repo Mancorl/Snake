@@ -1,0 +1,238 @@
+import pygame
+from pygame.locals import *
+import time
+import numpy
+FPS = 15
+Stepsize = 17
+
+#Instansierer Maten slangen skal spise og alle relevante variabler 
+class Food:
+    def __init__(self,Screen):
+        self.x = numpy.random.randint(Stepsize,1280 - Stepsize)
+        self.y = numpy.random.randint(Stepsize,720 - Stepsize)
+        self.Font = pygame.font.SysFont(None,26)
+        self.food = self.Font.render('F',True,(255,255,255))
+        self.screen = Screen
+        self.screen.blit(self.food,(self.x,self.y))
+        self.xm,self.ym = self.food.get_size()
+
+#Tegner maten. Siden dette er den siste tegnefunksjonen som blir kalt oppdaterer den også displayet
+    def draw_food(self):
+        self.food = self.Font.render('F',True,(255,255,255))
+        self.screen.blit(self.food,(self.x,self.y))
+        pygame.display.flip()
+
+#genererer nye koordinater for maten. Kalles kun når slangen har spist mat
+    def respawn_food(self):
+        self.x = numpy.random.randint(Stepsize, 1280 - Stepsize)
+        self.y = numpy.random.randint(Stepsize, 720 - Stepsize)
+
+
+
+
+#Instansierer slangen og alle relevante variabler
+class Snake:
+    def __init__(self, Screen, Snakelength):
+        size = 320
+        self.Snakelength = Snakelength
+        self.screen = Screen
+        self.Font = pygame.font.SysFont(None, 26)
+        self.Snek = self.Font.render('Q',True,(255, 255, 255))
+        self.body = self.Font.render('O',True,(255, 255, 255))
+        self.x = [size] * self.Snakelength
+        self.y = [size] * self.Snakelength
+        self.direction = "Down"
+        self.previousdirection = "Down"
+        self.speed = Stepsize
+        self.am,self.bm = self.Snek.get_size()
+        self.xm,self.ym = self.body.get_size()
+        self.gameOverFont = pygame.font.SysFont(None, 80)
+        self.gameovermessage = self.gameOverFont.render('Game Over, you lost. Press esc to exit',True,(255,255,255))
+
+
+#funksjonen lar slangen vokse når den har spist mat
+    def growsnake(self):
+        self.Snakelength += 1
+        self.x = self.x + [-100]
+        self.y = self.y + [-100]
+ 
+ #Setter retningen slangen beveger seg i
+    def move_up(self):
+        self.direction = "Up"
+    def move_down(self):
+        self.direction = "Down"
+    def move_left(self):
+        self.direction = "Left"
+    def move_right(self):
+        self.direction = "Right"
+
+#Denne funksjonen passer på at slangen alltid beveger seg i en retning    
+    def walk(self, Gameon):
+        unmoved = True
+        for i in range(self.Snakelength-1, 0, -1):
+            self.x[i] = self.x[i-1]
+            self.y[i] = self.y[i-1]
+        if self.direction == "Down" and unmoved:
+            self.y[0] += self.speed
+            unmoved = False
+            if self.y[0] > 720:
+                Gameon = self.gameover()
+                return Gameon
+        if self.direction == "Up" and unmoved:
+            self.y[0] -= self.speed
+            unmoved = False
+            if self.y[0] < 0:
+                Gameon = self.gameover()
+                return Gameon
+        if self.direction == "Right" and unmoved:
+            self.x[0] += self.speed
+            unmoved = False
+            if self.x[0] > 1280:
+                Gameon = self.gameover()
+                return Gameon
+        if self.direction == "Left" and unmoved:
+            self.x[0] -= self.speed
+            unmoved = False
+            if self.x[0] < 0:
+                Gameon = self.gameover()
+                return Gameon
+        self.draw()
+        return Gameon
+    
+    #Denne funksjonen sjekker om slangen har kræsjet med kroppen sin
+    def collision_check(self, Gameon):
+        for i in range(self.Snakelength - 1, 0, -1):
+            if (self.x[0],self.y[0]) == (self.x[i],self.y[i]):
+                Gameon = self.gameover()
+        if Gameon:
+            return True
+        else:
+            return False
+
+#Denne funksjonen kalles når slangen har kræsjet med skjermkanten eller seg selv og viser game over skjermen
+    def gameover(self):
+        gamelost = True
+        while gamelost:
+            self.screen.fill((0, 0, 0))
+            self.screen.blit(self.gameovermessage,(120, 300))
+            pygame.display.flip()
+            action = pygame.key.get_pressed()
+            if action[pygame.K_ESCAPE]:
+                return False
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return False
+        
+    #Tegner slangen, slangens kropp og setter koordinatene(Selve oppdateringen av displayet er i matens tegnefunksjon)
+    def draw(self):
+        self.screen.fill((0, 0, 0))
+        for i in range(self.Snakelength - 1 , -1, -1):
+            if i != 0:
+                self.screen.blit(self.body,(self.x[i], self.y[i]))
+            if i == 0:
+                if self.direction == "Down":
+                    self.Snek = self.Font.render('Q',True,(255, 255, 255))
+                    self.screen.blit(self.Snek,(self.x[i], self.y[i]))
+                if self.direction == "Up":
+                    self.Snek = pygame.transform.rotate(self.Font.render('Q', True, (255, 255, 255)), 180)
+                    self.screen.blit(self.Snek,(self.x[i], self.y[i]))
+                if self.direction == "Left":
+                    self.Snek = pygame.transform.rotate(self.Font.render('Q', True, (255, 255, 255)), 270)
+                    self.screen.blit(self.Snek,(self.x[i], self.y[i]))
+                if self.direction == "Right":
+                    self.Snek = pygame.transform.rotate(self.Font.render('Q', True, (255, 255, 255)), 90)
+                    self.screen.blit(self.Snek,(self.x[i], self.y[i]))
+    
+
+#Instansierer selve spillet og alle relevante variabler
+class Game:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((1280, 720))
+        self.snake = Snake(self.screen, 4)
+        self.snake.draw()
+        self.food = Food(self.screen)
+        self.gameOverFont = pygame.font.SysFont(None,86)
+        self.gameovermessage = self.gameOverFont.render('Game Over, you lost',True,(255,255,255))
+        self.clock = pygame.time.Clock()
+
+
+    #Sjekker om slangens hode spiser maten
+    def eat_food(self, a, b, am, bm, x, y, xm, ym):
+        if a >= x - 1:
+            if a <= x + xm + 1:
+                if b >= y - bm:
+                    if b <= y:
+                        self.snake.growsnake()
+                        self.food.respawn_food()
+                        
+                if b - bm >= y - bm:
+                    if b - bm <= y:
+                        self.snake.growsnake()
+                        self.food.respawn_food()
+                        
+        if a + am >= x-1:
+            if a + am <= x + xm +1:
+                if b>= y - bm:
+                    if b <= y:
+                        self.snake.growsnake()
+                        self.food.respawn_food()
+        
+                if b - bm >= y - bm:
+                    if b - bm <= y:
+                        self.snake.growsnake()
+                        self.food.respawn_food()
+                        
+
+#Denne løkken kjører hele spillet
+    def run(self):
+        Gameon = True
+        while Gameon:
+            move = pygame.key.get_pressed()
+            if move[pygame.K_s]:
+                if self.snake.previousdirection != "Up":
+                    self.snake.move_down()
+                    self.snake.previousdirection = "Down"
+            if move[pygame.K_w]:
+                if self.snake.previousdirection != "Down":
+                    self.snake.move_up()
+                    self.snake.previousdirection = "Up"
+            if move[pygame.K_d]:
+                if self.snake.previousdirection != "Left":
+                    self.snake.move_right()
+                    self.snake.previousdirection = "Right"
+            if move[pygame.K_a]:
+               if self.snake.previousdirection != "Right":
+                    self.snake.move_left()
+                    self.snake.previousdirection = "Left"
+            if move[pygame.K_DOWN]:
+                if self.snake.previousdirection != "Up":
+                    self.snake.move_down()
+                    self.snake.previousdirection = "Down"
+            if move[pygame.K_UP]:
+                if self.snake.previousdirection != "Down":
+                    self.snake.move_up()
+                    self.snake.previousdirection = "Up"
+            if move[pygame.K_RIGHT]:
+                if self.snake.previousdirection != "Left":
+                    self.snake.move_right()
+                    self.snake.previousdirection = "Right"
+            if move[pygame.K_LEFT]:
+               if self.snake.previousdirection != "Right":
+                    self.snake.move_left()
+                    self.snake.previousdirection = "Left"
+            if move[pygame.K_ESCAPE]:
+                Gameon=False
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    Gameon = False
+            Gameon = self.snake.walk(Gameon)
+            self.food.draw_food()
+            Gameon = self.snake.collision_check(Gameon)
+            self.eat_food(self.snake.x[0], self.snake.y[0], self.snake.am, self.snake.bm, self.food.x, self.food.y, self.food.xm, self.food.ym)
+            self.clock.tick(FPS)
+    
+#Denne klassen instansierer og starter spillet, og kjøres automatisk
+class main():
+    game = Game()
+    game.run()
